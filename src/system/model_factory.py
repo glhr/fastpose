@@ -31,9 +31,14 @@ class ModelFactory:
     @staticmethod
     def build_pose_2d_interface():
 
-        config = tf.ConfigProto()
-        config.gpu_options.allow_growth = True
-        session = tf.Session(config=config)
+        try:
+            config = tf.ConfigProto()
+            config.gpu_options.allow_growth = True
+            session = tf.Session(config=config)
+        except AttributeError:
+            config = tf.compat.v1.ConfigProto()
+            config.gpu_options.allow_growth = True
+            session = tf.compat.v1.Session(config=config)
 
         graph_file = "parameters/pose_2d/tiny/pose2d.pb"
 
@@ -65,12 +70,17 @@ class ModelFactory:
 
         #return Pose3DInterface(session, savePath)
 
-        tf.reset_default_graph()
-        use_gpu = True
-        device_count = {"GPU": 1} if use_gpu else {"GPU": 0}
-        session = tf.Session(config=tf.ConfigProto(device_count=device_count))
+        try:
+            tf.reset_default_graph()
+            use_gpu = True
+            device_count = {"GPU": 1} if use_gpu else {"GPU": 0}
+            session = tf.Session(config=tf.ConfigProto(device_count=device_count))
+        except AttributeError:
+            tf.compat.v1.reset_default_graph()
+            use_gpu = True
+            device_count = {"GPU": 1} if use_gpu else {"GPU": 0}
+            session = tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(device_count=device_count))
 
         protobuf = "parameters/pose_3d/pose3d.pb"
 
         return Pose3DInterface(session, protobuf)
-

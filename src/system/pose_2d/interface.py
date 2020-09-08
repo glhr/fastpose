@@ -18,32 +18,36 @@ class Pose2DInterface:
     def __init__(self, session, protograph, post_processing, input_size, subject_padding, input_node_name, output_node_name):
 
         os.environ['CUDA_VISIBLE_DEVICES'] = ''
-
-        with tf.gfile.GFile(protograph, "rb") as f:
-            restored_graph_def = tf.GraphDef()
-            restored_graph_def.ParseFromString(f.read())
-
-        tf.import_graph_def(
-            restored_graph_def,
-            input_map=None,
-            return_elements=None,
-            name=""
-        )
-
-        self.session = session
-
-        self.graph = tf.get_default_graph()
+        try:
+            with tf.gfile.GFile(protograph, "rb") as f:
+                restored_graph_def = tf.GraphDef()
+                restored_graph_def.ParseFromString(f.read())
+                tf.import_graph_def(
+                    restored_graph_def,
+                    input_map=None,
+                    return_elements=None,
+                    name=""
+                )
+                self.session = session
+                self.graph = tf.get_default_graph()
+        except AttributeError:
+            with tf.compat.v1.gfile.GFile(protograph, "rb") as f:
+                restored_graph_def = tf.compat.v1.GraphDef()
+                restored_graph_def.ParseFromString(f.read())
+                tf.import_graph_def(
+                    restored_graph_def,
+                    input_map=None,
+                    return_elements=None,
+                    name=""
+                )
+                self.session = session
+                self.graph = tf.compat.v1.get_default_graph()
 
         self.image = self.graph.get_tensor_by_name(input_node_name)
-
         self.output = self.graph.get_tensor_by_name(output_node_name)
-
         self.input_size = input_size
-
         self.post_processing = post_processing
-
         self.subject_padding = subject_padding
-
         self.body_cover = BodyCover(self.subject_padding)
 
 
@@ -238,4 +242,3 @@ class Pose2DInterface:
 
 
         return poses_2d, confidences
-
