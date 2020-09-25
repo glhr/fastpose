@@ -140,3 +140,5 @@ cython_debug/
 *.mp4
 *.zip
 parameters/
+
+*.pyc
