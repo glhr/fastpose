@@ -8,8 +8,11 @@ from sys import argv
 
 import argparse
 from vision_utils.timing import CodeTimer
+from vision_utils.logger import get_logger
+logger = get_logger()
 import glob
 import numpy as np
+import json
 
 parser = argparse.ArgumentParser(description='Directory of PNG images to use for inference.')
 parser.add_argument('--input_dir',
@@ -26,6 +29,7 @@ def start(folder_path, max_persons, scale=1):
 
     for test_image in glob.glob(f"{args.input_dir}/*.png"):
         img_name = f'{test_image.split("/")[-1].split(".")[-2]}-{scale}.{test_image.split(".")[-1]}' if scale<1 else test_image.split("/")[-1]
+        logger.info(img_name)
 
         frame = cv2.imread(test_image)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -54,6 +58,22 @@ def start(folder_path, max_persons, scale=1):
 
         cv2.imwrite(img_name,frame)
 
+        json_out = []
+        for pose_2d in poses:
+            joints = pose_2d.get_joints()
+            joints[:,0] = (joints[:,0] * frame.shape[1])
+            joints[:,1] = (joints[:,1] * frame.shape[0])
+            joints = joints.astype(int)
+            keypoints = []
+            for i in range(0,joints.shape[0]):
+                keypoints.extend([int(joints[i,0]), int(joints[i,1]),1])
+            logger.debug(keypoints)
+            json_out.append({'keypoints':keypoints})
+        json_out_name = '../eval/fastpose-drnoodle/' + img_name + '.predictions.json'
+        with open(json_out_name, 'w') as f:
+            json.dump(json_out, f)
+        logger.info(json_out_name)
+
     annotator.terminate()
     # cap.release()
     # cv2.destroyAllWindows()
@@ -68,4 +88,4 @@ if __name__ == "__main__":
 
     max_persons = 2
 
-    start(f"{args.input_dir}/*.png", max_persons, scale=0.5)
+    start(f"{args.input_dir}/*.png", max_persons, scale=1)
