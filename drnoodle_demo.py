@@ -3,13 +3,18 @@ from datetime import time
 import cv2
 from src.system.interface import AnnotatorInterface
 from src.utils.drawer import Drawer
+from src.utils.pose import PoseConfig
 import time
 from sys import argv
 
 import argparse
 from vision_utils.timing import CodeTimer
+from vision_utils.logger import get_logger
 import glob
 import numpy as np
+import json
+
+logger=get_logger()
 
 parser = argparse.ArgumentParser(description='Directory of PNG images to use for inference.')
 parser.add_argument('--input_dir',
@@ -38,6 +43,31 @@ def start(folder_path, max_persons, scale=1):
             poses = [p['pose_2d'] for p in persons]
 
             ids = [p['id'] for p in persons]
+
+            json_out = []
+            for pid in range(len(poses)):
+                bones = PoseConfig.BONES
+                joints = poses[pid].get_joints()
+
+                joints[:,0] = (joints[:,0] * frame.shape[1])
+                joints[:,1] = (joints[:,1] * frame.shape[0])
+                joints = joints.astype(int)
+
+                # is_active_mask = poses[pid].get_active_joints()
+
+                keypoints = []
+                for joint in joints:
+                    keypoints.extend([int(joint[0]), int(joint[1]), 1])
+                    print(joint[0], joint[1])
+                logger.debug(keypoints)
+
+                json_out.append({'keypoints':keypoints})
+
+            json_out_name = '../eval/fastpose-drnoodle/' + img_name + '.predictions.json'
+            with open(json_out_name, 'w') as f:
+                json.dump(json_out, f)
+            logger.info(json_out_name)
+
             frame = Drawer.draw_scene(frame, poses, ids, fps=None, curr_frame=None)
 
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
@@ -68,4 +98,4 @@ if __name__ == "__main__":
 
     max_persons = 2
 
-    start(f"{args.input_dir}/*.png", max_persons, scale=0.5)
+    start(f"{args.input_dir}/*.png", max_persons, scale=1)
